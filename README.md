@@ -5,13 +5,13 @@
 
 The package has been developed for the analysis of deep neural networks using different information-theoretic tools, especially Partial Information Decomposition.
 
-It has been developed as part of the following publication:
+It has been developed as part of the publication [*A Measure of the Complexity of Neural Representations based on Partial Information Decomposition*](https://openreview.net/pdf?id=R8TU3pfzFr) which appeared in May 2023 in Transactions on Machine Learning Research (TMLR):
 
 ```
 @article{ehrlich2023measure,
   title={A Measure of the Complexity of Neural Representations based on Partial Information Decomposition},
   author={Ehrlich, David A. and Schneider, Andreas C. and Priesemann, Viola and Wibral, Michael and Makkeh, Abdullah},
-  journal={TMLR},
+  journal={Transactions on Machine Learning Research},
   year={2023}
 }
 ```
