@@ -114,7 +114,7 @@ class Experiment:
         Returns:
             Experiment: Experiment instance.
         """
-
+        print(f"Loading experiment {exp_id}")
         experiment_dir = Experiment._find_experiment_dir(exp_id)
         return Experiment.load_file(experiment_dir / CONFIG_FILE_NAME)
 
@@ -199,15 +199,17 @@ class Experiment:
         """
 
         checkpoint = self.checkpoint_manager.get_checkpoint(run_id, chapter_id)
-
-        self.network.load_state_dict(checkpoint["model_state_dict"])
+        
+        model_state_dict = {key.replace('layers', '_module_list'):value for key, value in checkpoint['model_state_dict'].items()}
+        self.network.load_state_dict(model_state_dict)
         self.trainer.load_optimizer_state_dict(
             checkpoint["optimizer_state_dict"]
         )
         self.trainer.set_n_chapters_trained(checkpoint["chapter_id"])
         self.trainer.set_n_epochs_trained(checkpoint["epoch_id"])
 
-        torch.set_rng_state(checkpoint["torch_seed"])
+        print(f"toch seed hash: {hash(tuple(checkpoint['torch_seed']))}")
+        torch.set_rng_state(checkpoint["torch_seed"].cpu())
         np.random.set_state(checkpoint["numpy_seed"])
 
         log.info(f"Successfully loaded checkpoint {run_id}-{chapter_id}.")
@@ -232,7 +234,7 @@ class Experiment:
                 )
                 return
             else:
-                chapter_ends = self._schedule.chapter_ends
+                chapter_ends = np.array(self._schedule.chapter_ends)
 
         if continue_run:
             log.warning(
@@ -251,19 +253,19 @@ class Experiment:
         )
         log.info(info)
         print(info)
+
+        # print cuda info
+        print(f'Use CUDA: {use_cuda}')
+        print(f'Cuda available: {torch.cuda.is_available()}')
+        print(f'Cuda device count: {torch.cuda.device_count()}')
+        print(f'Network is on cuda: {next(self.network.parameters()).is_cuda}')
+
         for c in range(self.chapter_id, len(chapter_ends) - 1):
-            if chapter_ends[c] != self.epoch_id:
-                log.error(
-                    "Error on continuing schedule,"
-                    + " schedule.chapter_ends[{}]={}".format(c, chapter_ends[c])
-                    + " and experiment's self.epoch_id={} ".format(self.epoch_id)
-                    + "do not fit together."
-                )
-                raise ValueError
             # running c+1:
-            n_epochs_chapter = chapter_ends[c + 1] - chapter_ends[c]
+            n_epochs_chapter = int(np.ceil(chapter_ends[c + 1] - self.epoch_id))
+
             self._trainer.train_chapter(
-                n_epochs_chapter=n_epochs_chapter, use_cuda=use_cuda, use_ipex=use_ipex, compute_test_loss=compute_test_loss)
+                n_epochs_chapter=n_epochs_chapter, chapter_ends=chapter_ends, use_cuda=use_cuda, use_ipex=use_ipex, compute_test_loss=compute_test_loss)
 
     def continue_runs_following_schedule(self, runs_id_list, stop_epoch, schedule=None, use_cuda=False, compute_test_loss=None):
         if schedule is None:
@@ -282,10 +284,17 @@ class Experiment:
         for run_id in runs_id_list:
             last_chapter = self.checkpoint_manager.get_last_chapter_in_run(run_id)
             self.load_checkpoint(run_id, last_chapter)
+
+            # Only continue if last chapter ends on integer epoch
+            if not self.trainer.n_epochs_trained == int(self.trainer.n_epochs_trained):
+                log.error(
+                    "Last chapter does not end on integer epoch. Cannot continue training.")
+                return
+
             self.run_following_schedule(
                 continue_run=True, chapter_ends=chapter_ends, use_cuda=use_cuda, compute_test_loss=compute_test_loss)
 
-    def rerun(self, n_runs, like_run_id=None):
+    def rerun(self, n_runs, like_run_id=None, use_cuda=False):
         """
         Reruns the experiment for a given number of runs. For doing this, it uses
         the checkpoints of a previous run that are found in the checkpoints directory
@@ -317,8 +326,23 @@ class Experiment:
             self._run_id = last_run_id + 1
             # reinitialize the network with a new seed
             self._network.init_weights(randomize_seed=True)
-            self.run_following_schedule(chapter_ends=epoch_list)
+            self.run_following_schedule(chapter_ends=epoch_list, use_cuda=use_cuda)
             last_run_id = self._run_id
+
+    def rerun_original_schedule(self, run_id=1, use_cuda=False):
+        """
+        Reruns the experiment with the original schedule.
+        """
+        log.info("Setting up rerun of experiment with original schedule.")
+
+        self.load_checkpoint(run_id=0, chapter_id=0)
+        
+        assert run_id not in self.checkpoint_manager.get_run_ids(), 'Run id already exists!'
+
+        self._run_id = run_id
+        self._network.init_weights(randomize_seed=True)
+
+        self.run_following_schedule(use_cuda=use_cuda, compute_test_loss=False)
 
     def save_checkpoint(self):
         """
@@ -428,19 +452,15 @@ class Experiment:
                 )
 
                 # Reshape to neuron id dicts NeuronID->[activations]
-                act_dict = {
-                    NeuronID(layer_id, (neuron_idx + 1,)): act_dict[layer_id][:, neuron_idx]
-                    if act_dict[layer_id].ndim > 1
-                    else act_dict[layer_id]
-                    for layer_id in act_dict
-                    for neuron_idx in range(
-                        act_dict[layer_id].shape[1]
-                        if act_dict[layer_id].ndim > 1
-                        else 1
-                    )
-                }
-
-                yield act_dict 
+                reshaped_act_dict = {}
+                for layer_id, act_dict_layer in act_dict.items():
+                    for neuron_idx_zerobased in np.ndindex(act_dict_layer.shape[1:]):
+                        neuron_idx = tuple([idx + 1 for idx in neuron_idx_zerobased])
+                        slicer = (slice(None),) + neuron_idx_zerobased
+                        reshaped_act_dict[NeuronID(layer_id, neuron_idx)] = act_dict_layer[slicer]
+                    
+                
+                yield reshaped_act_dict 
 
     @property
     def experiment_dir(self):

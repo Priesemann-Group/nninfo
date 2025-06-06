@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
+import pandas as pd
 
 from nninfo.exp_comp import ExperimentComponent
 from nninfo.model.quantization import quantizer_list_factory
@@ -78,3 +79,53 @@ class Tester(ExperimentComponent):
         accuracy = correct / total_size
 
         return loss, accuracy
+    
+    def compute_loss_and_accuracy_by_target(self, dataset_name=None, quantizer_params=None, quantizer=None):
+
+        activations_iter = self._get_output_activations(
+            dataset_name, quantizer_params, quantizer)
+        
+        loss_fn = self.parent.trainer.loss
+
+        losses_per_target = {}
+        correct_per_target = {}
+        count_per_target = {}
+
+        for pred_y_test_batch, y_test_batch in activations_iter:
+
+            for pred_y_test, y_test in zip(pred_y_test_batch, y_test_batch):
+
+                # Compute loss
+                loss = loss_fn(pred_y_test, y_test).item()
+
+                # Compute accuracy
+                if self.parent.task.task.y_dim > 1 and isinstance(y_test, int):
+                    # One-hot-representation
+                    decision = pred_y_test.argmax(dim=1)
+                    correct = (decision == y_test).item()
+                    target = y_test
+                else:
+                    # Binary output representations
+                    decision = torch.round(pred_y_test)
+                    correct = torch.all(decision == y_test).item()
+                    target = tuple(int(i) for i in y_test)
+
+                # Add loss, accuracy and count
+                if target not in losses_per_target:
+                    losses_per_target[target] = 0
+                    correct_per_target[target] = 0
+                    count_per_target[target] = 0
+
+                losses_per_target[target] += loss
+                correct_per_target[target] += correct
+                count_per_target[target] += 1
+
+        # Compute average loss and accuracy for each class
+        class_losses_avg = {target: loss / count for target, (loss, count) in dict_zip(losses_per_target, count_per_target)}
+        class_accuracy_avg = {target: correct / count for target, (correct, count) in dict_zip(correct_per_target, count_per_target)}
+
+        return class_losses_avg, class_accuracy_avg
+        
+def dict_zip(*dicts):
+    for key in dicts[0]:
+        yield key, tuple(d[key] for d in dicts)

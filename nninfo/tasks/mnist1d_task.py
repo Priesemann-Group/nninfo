@@ -39,4 +39,8 @@ class Mnist1DTask(Task):
         y = torch.cat([mnist.targets, mnist_test.targets,
                       qmnist_test.targets[:, 0]])
 
+        # move to gpu if available
+        if torch.cuda.is_available():
+            return x.type(torch.float32).cuda(), y.type(torch.long).cuda()
+        
         return x.type(torch.float32), y.type(torch.long)

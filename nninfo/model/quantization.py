@@ -40,7 +40,7 @@ class StochasticQuantizer(Quantizer):
 
         # Make sure all activations are within the limits
         assert torch.all(x >= self.limits[0]) and torch.all(
-            x <= self.limits[1]), f"Activations are not within the limits {self.limits}"
+            x <= self.limits[1]), f"Activations ({x.min()} - {x.max()}) are not within the limits {self.limits} "
 
         x_normalized = (x - self.limits[0]) / self.scale
 

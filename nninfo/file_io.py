@@ -129,7 +129,9 @@ class CheckpointManager(ExperimentComponent):
         
         file_name = self.get_checkpoint_filename(run_id, chapter_id)
 
-        return torch.load(file_name)
+        cuda = torch.cuda.is_available()
+
+        return torch.load(file_name, map_location=torch.device("cuda" if cuda else "cpu"))
 
     def read(self, filename):
         if self._checkpoint_loader is None:

@@ -104,9 +104,12 @@ class Measurement(ABC):
                             value=self._experiment.schedule.get_epoch_for_chapter(chapter_id))
 
         with filelock.FileLock(self._results_file_lock):
-            with pd.HDFStore(self._results_file) as store:
-                store.put("results", results_df,
-                          append=True, format="table")
+                
+            # Add previous results
+            results_df = pd.concat([self.results, results_df], ignore_index=True)
+            
+            # Overwrite the results file
+            results_df.to_hdf(self._results_file, "results", mode="w")
 
     def perform_measurements(self, run_ids: Literal['all'] | int | list[int], chapter_ids: Literal['all'] | int | list[int], exists_ok: bool = True):
 
@@ -137,9 +140,6 @@ class Measurement(ABC):
 
     def perform_measurement(self, run_id: int, chapter_id: int, exists_ok: bool = True):
 
-        if not self._results_file.exists():
-            self._create_results_file()
-
         # Check if there is already a result for this run_id and chapter_id
         if self._check_if_result_exists(run_id, chapter_id):
             if exists_ok:
@@ -155,20 +155,17 @@ class Measurement(ABC):
 
         self.save_results(run_id, chapter_id, results)
 
-    def _create_results_file(self):
-        """Creates the results file.
-
-        """
-        with filelock.FileLock(self._results_file_lock):
-            with pd.HDFStore(self._results_file) as store:
-                store.put("results", pd.DataFrame(),
-                          append=True, format="table")
-
     def _check_if_result_exists(self, run_id: int, chapter_id: int):
 
-        results = self.results
-        if results[(results["run_id"] == run_id) & (results["chapter_id"] == chapter_id)].shape[0] > 0:
-            return True
+        with filelock.FileLock(self._results_file_lock):
+
+            if self.results.empty:
+                print("Results file is empty.")
+                return False
+
+            results = self.results
+            if results[(results["run_id"] == run_id) & (results["chapter_id"] == chapter_id)].shape[0] > 0:
+                return True
 
     @abstractmethod
     def _measure(self, *args, **kwargs):
@@ -177,11 +174,7 @@ class Measurement(ABC):
     @property
     def results(self):
 
-        with filelock.FileLock(self._results_file_lock):
-            with pd.HDFStore(self._results_file) as store:
-                try:
-                    results_df = store.select("results")
-                except KeyError:
-                    results_df = pd.DataFrame(columns=["run_id", "chapter_id", "epoch_id"])
+        if not self._results_file.exists():
+            return pd.DataFrame()
 
-        return results_df
+        return pd.read_hdf(self._results_file, "results")
