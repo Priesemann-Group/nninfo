@@ -56,6 +56,7 @@ class Binning(ABC):
                     ]
                 )
                 for grouping in self._groupings
+                if grouping != []
             ]
         )
         self._counter.update(grouped_activations)

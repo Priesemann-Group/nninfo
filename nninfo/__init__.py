@@ -1,3 +1,6 @@
+import time
+itic = time.perf_counter()
+
 import logging
 import os
 
@@ -28,3 +31,6 @@ logging.basicConfig(
     filemode="a",
 )
 logging.getLogger("nninfo").info("STARTUP NNINFO SESSION")
+
+itoc = time.perf_counter()
+print(f'nninfo startup took {itoc-itic}s')

@@ -1,5 +1,3 @@
-The below license applies to all code files in this repository, but does not cover the associated datasets, which are subject to their own terms of use.
-
 BSD 3-Clause License
 
 Copyright (c) 2023, Andreas C. Schneider, David A. Ehrlich

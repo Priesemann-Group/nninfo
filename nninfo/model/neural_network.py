@@ -35,9 +35,14 @@ CONNECTION_LAYERS_PYTORCH = {
     "linear": nn.Linear,
     "dropout": nn.Dropout,
     "maxpool2d": nn.MaxPool2d,
+    "avgpool2d": nn.AvgPool2d,
     "conv2d": nn.Conv2d,
+    "conv2d_transpose": nn.ConvTranspose2d,
     "flatten": nn.Flatten,
+    "reshape": lambda shape: (lambda x: x.view(shape)),
     "random_rotation": RandomRotation,
+    "batchnorm1d": nn.BatchNorm1d,
+    "batchnorm2d": nn.BatchNorm2d,
 }
 
 ACTIV_FUNCS_PYTORCH = {
@@ -301,7 +306,7 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
         """
         return [ACTIV_FUNCS_BINNING_LIMITS[layer_info.activation_function] for layer_info in self._layer_infos]
 
-    def forward(self, x, quantizers, return_activations=False, apply_output_softmax=None):
+    def forward(self, x, quantizers, return_activations=False, return_activations_torch=False, apply_output_softmax=None):
         """
 
         Forward pass for the network, given a batch.
@@ -315,7 +320,7 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
         if apply_output_softmax is None:
             apply_output_softmax = return_activations
 
-        if return_activations:
+        if return_activations or return_activations_torch:
             activations = {}
 
         for i in range(self.n_layers):
@@ -331,7 +336,10 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
             if return_activations:
                 activations["L" + str(i + 1)] = x.detach().numpy()
 
-        if return_activations:
+            if return_activations_torch:
+                activations["L" + str(i + 1)] = x
+
+        if return_activations or return_activations_torch:
             return x, activations
         
         return x
@@ -377,6 +385,7 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
         self.apply(self._init_weight_fct)
 
     def _init_weight_fct(self, m):
+    
         if isinstance(m, nn.Linear):
             if self._init_str == "xavier":
                 self._initializer(m.weight, gain=5./3.)
@@ -387,13 +396,24 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
                 self._initializer(m.weight, gain=np.sqrt(2))
             else:
                 self._initializer(m.weight)
+        elif isinstance(m, nn.ConvTranspose2d):
+            if self._init_str == "xavier":
+                self._initializer(m.weight, gain=1)
+            else:
+                self._initializer(m.weight)
+        elif isinstance(m, nn.BatchNorm1d):
+            m.weight.data.fill_(1)
+            m.bias.data.zero_()
+        elif isinstance(m, nn.BatchNorm2d):
+            m.weight.data.fill_(1)
+            m.bias.data.zero_()
         elif isinstance(m, nn.Sequential):
             if len(m) == 2 and isinstance(m[0], nn.Linear):
                 if self._init_str == "xavier":
                     self._initializer(m[0].weight, gain=5./3.)
                 else:
                     self._initializer(m[0].weight)
-        elif not isinstance(m, (nn.ModuleList, NeuralNetwork, nn.MaxPool2d, nn.Flatten)):
+        elif not isinstance(m, (nn.ModuleList, NeuralNetwork, nn.MaxPool2d, nn.AvgPool2d, nn.Flatten, nn.Dropout)):
             raise NotImplementedError(
                 f"Weight initialization for {m} is not implemented."
             )

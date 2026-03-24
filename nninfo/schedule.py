@@ -55,7 +55,7 @@ class Schedule:
         }
         return config
 
-    def create_log_spaced_chapters(self, n_epochs, n_chapters_wished):
+    def create_log_spaced_chapters(self, n_epochs, n_chapters_wished, start_exp=0, fractional=False):
         """
         Function that creates a list of numbers which are the epoch indices where chapters
         are ended. The indices are created logarithmically spaced over the total number of
@@ -74,17 +74,21 @@ class Schedule:
 
         def log_space(n_e, n_c):
             end = np.log10(n_e)
-            epochs = np.logspace(0, end, n_c + 1, endpoint=True)
-            epochs = np.round(epochs).astype(int)
-            epochs = np.unique(epochs)
+            epochs = np.logspace(start_exp, end, n_c + 1, endpoint=True)
+
+            if not fractional:
+                epochs = np.round(epochs).astype(int)
+                epochs = np.unique(epochs)
+            
             # add a 0 in the front for consistency
             epochs = np.insert(epochs, 0, 0)
             return epochs
 
         self.chapter_ends = log_space(n_epochs, n_chapters_wished).tolist()
         self.chapter_ends_continued = log_space(
-            n_epochs * n_epochs, n_chapters_wished * 2
+            n_epochs * n_epochs * 10**-start_exp, 2 * n_chapters_wished
         ).tolist()
+        assert np.allclose(self.chapter_ends, self.chapter_ends_continued[:len(self.chapter_ends)])
 
     def create_lin_spaced_chapters(self, n_epochs, n_chapters_wished):
         """
