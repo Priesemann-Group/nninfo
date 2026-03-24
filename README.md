@@ -16,6 +16,17 @@ It has been developed as part of the publication [*A Measure of the Complexity o
 }
 ```
 
+The package has also been used for the publication [Shannon observables: A scalable approach to information decomposition](https://arxiv.org/abs/2504.15779)
+
+````
+@article{gutknecht2025shannon,
+  title={Shannon invariants: A scalable approach to information decomposition},
+  author={Gutknecht, Aaron J and Rosas, Fernando E and Ehrlich, David A and Makkeh, Abdullah and Mediano, Pedro AM and Wibral, Michael},
+  journal={arXi` preprint arXiv:2504.15779},
+  year={2025}
+}
+```
+
 ### Contributions
 
 The *nninfo* software package was originally envisioned and developed by [Andreas C. Schneider](https://github.com/ac-schneider). The package has been majorly refactored and extended for the TMLR publication by [David A. Ehrlich](https://github.com/daehrlich). We further thank [Valentin Neuhaus](https://github.com/vneuhaus) for his contributions to the code. The *nninfo* package is actively maintained by Andreas C. Schneider and David A. Ehrlich.
@@ -49,3 +60,7 @@ To make the examination of the experiment pipeline easier, we include a fifth sc
 - *5_tmlr_demo.ipynb* demo script using the Task by Tishby et al.
 
  This demo script can be run entirely in approximately two hours on a modern desktop computer.
+
+ Likewise, for the Shannon Observables paper, two scripts are provided:
+ - *1_shannon_invariants_mnist.ipynb* creates Figure 2
+ - *2_shannon_invariants_autoencoder.ipynb* creates Figure 3
