@@ -61,6 +61,10 @@ To make the examination of the experiment pipeline easier, we include a fifth sc
 
  This demo script can be run entirely in approximately two hours on a modern desktop computer.
 
- Likewise, for the Shannon Observables paper, two scripts are provided:
- - *1_shannon_observables_mnist.ipynb* creates Figure 2
- - *2_shannon_observables_autoencoder.ipynb* creates Figure 3
+ Likewise, for the Shannon Observables paper, four scripts are provided in the *shannon_observables_scripts* directory:
+ - *1_shannon_observables_mnist.ipynb* trains the MNIST classifier and creates Figures 3b and 3e–h as well as the quantization-robustness figure of the appendix (Figure 8)
+ - *2_shannon_observables_autoencoder.ipynb* trains the face autoencoder and creates the panels of Figure 4 and Table II
+ - *3_shannon_observables_lesioning.ipynb* reuses the MNIST checkpoints for the single-neuron lesioning analysis and creates Figures 3c and 3d as well as the importance-measure comparison of the appendix (Figure 7, Table III) (runs in minutes)
+ - *4_shannon_observables_dropout.ipynb* trains and measures the networks with one-neuron dropout used in Figures 3b–c and 3g–h (takes several hours)
+
+ The MNIST figures are written to *experiments/exp_mnist_8levels_onehot/plots/* under the file names used in the manuscript.
