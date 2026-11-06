@@ -266,7 +266,9 @@ class Trainer(ExperimentComponent):
                 if batch_num == len(feeder) - 1:
                     self._n_epochs_trained += 1
 
-                if frac_epoch >= chapter_ends[self._n_chapters_trained + 1] and prev_frac_epoch < chapter_ends[self._n_chapters_trained + 1]:
+                # guard: after the last chapter end is crossed (possible mid-epoch
+                # with fractional chapter ends), there is no next end to check
+                if self._n_chapters_trained + 1 < len(chapter_ends) and frac_epoch >= chapter_ends[self._n_chapters_trained + 1] and prev_frac_epoch < chapter_ends[self._n_chapters_trained + 1]:
                     self._end_chapter()
                     while self._n_chapters_trained+1 < len(chapter_ends) and frac_epoch >= chapter_ends[self._n_chapters_trained + 1]:
                         self._end_chapter()

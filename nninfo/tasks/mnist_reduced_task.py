@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT
 
 class ReducedMnistTask(Task):
     task_id = "mnist_reduced_dat"
@@ -28,9 +28,9 @@ class ReducedMnistTask(Task):
 
     def load_samples(self):
         mnist = torchvision.datasets.MNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         mnist_test = torchvision.datasets.MNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
 
         x = torch.cat([mnist.train_data, mnist_test.test_data]
                       ).reshape(-1, 784)

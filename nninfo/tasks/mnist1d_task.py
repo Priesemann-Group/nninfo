@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT, qmnist_class_labels
 
 class Mnist1DTask(Task):
     task_id = "mnist_1d_dat"
@@ -28,16 +28,16 @@ class Mnist1DTask(Task):
 
     def load_samples(self):
         mnist = torchvision.datasets.MNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         mnist_test = torchvision.datasets.MNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
         qmnist_test = torchvision.datasets.QMNIST(
-            root="../", what='test50k', download=True, train=False)
+            root=DATASET_ROOT, what='test50k', download=True, train=False)
 
         x = torch.cat([mnist.data, mnist_test.data,
                       qmnist_test.data]).reshape(-1, 784) / 256.
         y = torch.cat([mnist.targets, mnist_test.targets,
-                      qmnist_test.targets[:, 0]])
+                      qmnist_class_labels(qmnist_test)])
 
         # move to gpu if available
         if torch.cuda.is_available():

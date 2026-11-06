@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT
 
 class Mnist2DTask(Task):
     task_id = "mnist_2d_dat"
@@ -28,11 +28,11 @@ class Mnist2DTask(Task):
 
     def load_samples(self):
         mnist = torchvision.datasets.MNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         mnist_test = torchvision.datasets.MNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
         #qmnist_test = torchvision.datasets.QMNIST(
-        #    root="../", what='test50k', download=True, train=False)
+        #    root=DATASET_ROOT, what='test50k', download=True, train=False)
 
         x = torch.cat([mnist.data, mnist_test.data]).reshape(-1, 1, 28, 28) / 256.
         y = torch.cat([mnist.targets, mnist_test.targets])

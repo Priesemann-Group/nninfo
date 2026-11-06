@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT, qmnist_class_labels
 
 class MnistEightBinaryTask(Task):
     """Mnist task but only with digits from 0-7
@@ -35,16 +35,16 @@ class MnistEightBinaryTask(Task):
 
     def load_samples(self):
         mnist = torchvision.datasets.MNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         mnist_test = torchvision.datasets.MNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
         qmnist_test = torchvision.datasets.QMNIST(
-            root="../", what='test50k', download=True, train=False)
+            root=DATASET_ROOT, what='test50k', download=True, train=False)
 
         x = torch.cat([mnist.data, mnist_test.data,
                        qmnist_test.data]).reshape(-1, 784) / 256.
         y = torch.cat([mnist.targets, mnist_test.targets,
-                       qmnist_test.targets[:, 0]])
+                       qmnist_class_labels(qmnist_test)])
 
         # Filter out digits 8 and 9
         filter_mask = (y != 8) & (y != 9)

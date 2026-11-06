@@ -29,6 +29,45 @@ class RandomRotation(nn.Module):
     def forward(self, x):
         return torch.matmul(x, self.rotation_matrix)
 
+
+class OneNeuronDropout(nn.Module):
+    """Zeroes one randomly chosen neuron per sample, during training only.
+
+    Unlike `nn.Dropout`, which drops each unit independently, exactly *one*
+    unit per sample is removed, so the surviving code always has the same
+    width minus one. Survivors are not rescaled.
+
+    With ``p < 1`` the intervention hits only a random p-fraction of the
+    samples ("partial dropout"): each sample independently either loses one
+    randomly chosen neuron (probability p) or passes through unchanged.
+
+    Like `nn.Dropout` this is a training-time intervention and an identity in
+    eval mode, so the measurement and testing code paths -- which put the
+    network in `eval()` -- see the intact code. Because it is a layer of its
+    own, the activations before and after the intervention carry separate
+    labels and can be measured separately.
+    """
+
+    def __init__(self, p: float = 1.0):
+        super().__init__()
+        self.p = float(p)
+
+    def forward(self, x):
+        if not self.training:
+            return x
+        rows = torch.arange(x.shape[0], device=x.device)
+        dropped = torch.randint(0, x.shape[1], (x.shape[0],), device=x.device)
+        mask = torch.ones_like(x)
+        mask[rows, dropped] = 0.0
+        if self.p < 1.0:
+            apply = torch.rand(x.shape[0], device=x.device) < self.p
+            mask = torch.where(apply.unsqueeze(1), mask, torch.ones_like(x))
+        return x * mask
+
+    def extra_repr(self):
+        return f"p={self.p}"
+
+
 CONNECTION_LAYERS_PYTORCH = {
     "input": lambda: (lambda x: x),
     "identity": lambda: (lambda x: x),
@@ -43,7 +82,21 @@ CONNECTION_LAYERS_PYTORCH = {
     "random_rotation": RandomRotation,
     "batchnorm1d": nn.BatchNorm1d,
     "batchnorm2d": nn.BatchNorm2d,
+    "one_neuron_dropout": OneNeuronDropout,
 }
+
+# Connection layers that are kept out of `_module_list` and registered in
+# `_aux_module_list` instead. They carry no parameters and no buffers, so they
+# contribute nothing to the state_dict, but `_module_list` entries are named by
+# position (`_module_list.3.weight`): inserting one there would shift the
+# weighted layers and make every existing checkpoint unloadable. Registering
+# them as children still propagates `train()` / `eval()`.
+AUX_CONNECTION_LAYERS = (OneNeuronDropout,)
+
+# Connection layers that do not change the value range of their input, so their
+# binning limits are those of the layer they follow rather than those of their
+# own (identity) activation function.
+LIMITS_INHERITING_LAYERS = (OneNeuronDropout,)
 
 ACTIV_FUNCS_PYTORCH = {
     None: lambda: (lambda x: x),
@@ -169,6 +222,7 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
         self._connection_layers = []
         self._activ_funcs = []
         self._module_list = nn.ModuleList()
+        self._aux_module_list = nn.ModuleList()
 
         for layer_info in layer_infos:
 
@@ -189,7 +243,9 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
             connection_layer = connection_layer_factory(**layer_info.connection_layer_kwargs)
 
             self._connection_layers.append(connection_layer)
-            if isinstance(connection_layer, nn.Module):
+            if isinstance(connection_layer, AUX_CONNECTION_LAYERS):
+                self._aux_module_list.append(connection_layer)
+            elif isinstance(connection_layer, nn.Module):
                 self._module_list.append(connection_layer)
 
         self._initializer = None
@@ -304,7 +360,17 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
         Currently returns None for the input Limits
         returns: [(low, high) or "binary"]
         """
-        return [ACTIV_FUNCS_BINNING_LIMITS[layer_info.activation_function] for layer_info in self._layer_infos]
+        limits = []
+        for i, layer_info in enumerate(self._layer_infos):
+            if i > 0 and isinstance(self._connection_layers[i],
+                                    LIMITS_INHERITING_LAYERS):
+                # one-neuron dropout only adds zeros, which lie inside every
+                # activation range we support, so the range is unchanged
+                limits.append(limits[-1])
+            else:
+                limits.append(
+                    ACTIV_FUNCS_BINNING_LIMITS[layer_info.activation_function])
+        return limits
 
     def forward(self, x, quantizers, return_activations=False, return_activations_torch=False, apply_output_softmax=None):
         """
@@ -413,7 +479,7 @@ class NeuralNetwork(nninfo.exp_comp.ExperimentComponent, nn.Module):
                     self._initializer(m[0].weight, gain=5./3.)
                 else:
                     self._initializer(m[0].weight)
-        elif not isinstance(m, (nn.ModuleList, NeuralNetwork, nn.MaxPool2d, nn.AvgPool2d, nn.Flatten, nn.Dropout)):
+        elif not isinstance(m, (nn.ModuleList, NeuralNetwork, nn.MaxPool2d, nn.AvgPool2d, nn.Flatten, nn.Dropout, OneNeuronDropout)):
             raise NotImplementedError(
                 f"Weight initialization for {m} is not implemented."
             )

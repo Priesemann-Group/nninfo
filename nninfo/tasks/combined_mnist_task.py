@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT
 
 class CombinedMnistTask(Task):
     task_id = "combined_mnist_1d_dat"
@@ -28,14 +28,14 @@ class CombinedMnistTask(Task):
 
     def load_samples(self):
         mnist = torchvision.datasets.MNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         mnist_test = torchvision.datasets.MNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
 
         fmnist = torchvision.datasets.FashionMNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         fmnist_test = torchvision.datasets.FashionMNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
 
         x = torch.cat([mnist.data, fmnist.data, mnist_test.data,
                        fmnist_test.data]).reshape(-1, 784) / 256.
