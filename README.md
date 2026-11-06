@@ -18,11 +18,11 @@ It has been developed as part of the publication [*A Measure of the Complexity o
 
 The package has also been used for the publication [Shannon observables: A scalable approach to information decomposition](https://arxiv.org/abs/2504.15779)
 
-````
+```
 @article{gutknecht2025shannon,
-  title={Shannon invariants: A scalable approach to information decomposition},
+  title={Shannon observables: A scalable approach to information decomposition},
   author={Gutknecht, Aaron J and Rosas, Fernando E and Ehrlich, David A and Makkeh, Abdullah and Mediano, Pedro AM and Wibral, Michael},
-  journal={arXi` preprint arXiv:2504.15779},
+  journal={arXiv preprint arXiv:2504.15779},
   year={2025}
 }
 ```
@@ -62,5 +62,5 @@ To make the examination of the experiment pipeline easier, we include a fifth sc
  This demo script can be run entirely in approximately two hours on a modern desktop computer.
 
  Likewise, for the Shannon Observables paper, two scripts are provided:
- - *1_shannon_invariants_mnist.ipynb* creates Figure 2
- - *2_shannon_invariants_autoencoder.ipynb* creates Figure 3
+ - *1_shannon_observables_mnist.ipynb* creates Figure 2
+ - *2_shannon_observables_autoencoder.ipynb* creates Figure 3
