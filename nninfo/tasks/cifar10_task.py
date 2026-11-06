@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT
 
 class CIFAR10Task(Task):
     task_id = "cifar10_1d_dat"
@@ -29,9 +29,9 @@ class CIFAR10Task(Task):
     def load_samples(self):
 
         cifar10_train = torchvision.datasets.CIFAR10(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         cifar10_test = torchvision.datasets.CIFAR10(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
         x_train = torch.from_numpy(cifar10_train.data) / 1.
         x_test = torch.from_numpy(cifar10_test.data) / 1.
         x = torch.cat([x_train, x_test])

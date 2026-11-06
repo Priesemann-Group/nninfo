@@ -4,3 +4,16 @@
 
 experiments
 .vscode
+# torchvision dataset caches (DATASET_ROOT in nninfo/tasks/task.py)
+/MNIST/
+/QMNIST/
+/FashionMNIST/
+/EMNIST/
+/cifar-10-batches-py/
+/cifar-10-python.tar.gz
+
+# Overleaf manuscript clone (its own git repository)
+manuscript/
+
+# packaging artifacts
+*.egg-info/

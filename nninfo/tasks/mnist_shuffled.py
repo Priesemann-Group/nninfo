@@ -2,7 +2,7 @@ import torch
 import torchvision
 import numpy as np
 
-from .task import Task
+from .task import Task, DATASET_ROOT, qmnist_class_labels
 
 class Mnist1DShuffledTask(Task):
     task_id = "mnist_1d_shuffled_dat"
@@ -29,12 +29,12 @@ class Mnist1DShuffledTask(Task):
 
 
     def load_samples(self, component_dir):
-        mnist = torchvision.datasets.MNIST(root="../", download=True, train=True)
-        mnist_test = torchvision.datasets.MNIST(root="../", download=True, train=False)
-        qmnist_test = torchvision.datasets.QMNIST(root="../", what='test50k', download=True, train=False)
+        mnist = torchvision.datasets.MNIST(root=DATASET_ROOT, download=True, train=True)
+        mnist_test = torchvision.datasets.MNIST(root=DATASET_ROOT, download=True, train=False)
+        qmnist_test = torchvision.datasets.QMNIST(root=DATASET_ROOT, what='test50k', download=True, train=False)
         
         x = torch.cat([mnist.data, mnist_test.data, qmnist_test.data]).reshape(-1, 784) / 256.
-        y = torch.cat([mnist.targets, mnist_test.targets, qmnist_test.targets[:,0]])
+        y = torch.cat([mnist.targets, mnist_test.targets, qmnist_class_labels(qmnist_test)])
 
         # Shuffle y labels for test and train set separately
         rng = np.random.default_rng(42 + self._kwargs["seed"])

@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT
 
 class Mnist1DTaskAutoencoder(Task):
     task_id = "mnist_1d_autoencoder"
@@ -28,9 +28,9 @@ class Mnist1DTaskAutoencoder(Task):
 
     def load_samples(self):
         mnist = torchvision.datasets.MNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         mnist_test = torchvision.datasets.MNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
 
         x = torch.cat([mnist.data, mnist_test.data]).reshape(-1, 784) / 256.
 

@@ -1,7 +1,7 @@
 import torch
 import torchvision.datasets
 
-from .task import Task
+from .task import Task, DATASET_ROOT
 
 class FashionMnistTask(Task):
     task_id = "fashion_mnist_1d_dat"
@@ -28,9 +28,9 @@ class FashionMnistTask(Task):
 
     def load_samples(self):
         mnist = torchvision.datasets.FashionMNIST(
-            root="../", download=True, train=True)
+            root=DATASET_ROOT, download=True, train=True)
         mnist_test = torchvision.datasets.FashionMNIST(
-            root="../", download=True, train=False)
+            root=DATASET_ROOT, download=True, train=False)
 
         x = torch.cat([mnist.data, mnist_test.data]).reshape(-1, 784) / 256.
         y = torch.cat([mnist.targets, mnist_test.targets])
